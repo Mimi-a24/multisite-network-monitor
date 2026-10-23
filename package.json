@@ -1,0 +1,29 @@
+{
+  "name": "multisite-network-monitor",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "api",
+    "worker"
+  ],
+  "scripts": {
+    "build": "tsc -b api worker",
+    "typecheck": "tsc -b api worker",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "migrate": "node-pg-migrate -m migrations"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "node-pg-migrate": "^9.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

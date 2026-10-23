@@ -1,0 +1,114 @@
+name: multisite-network-monitor
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monitor}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # AOF: the stream survives a Redis restart, not only a worker restart.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file: .env
+    environment:
+      API_PORT: 3000
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    env_file: .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  collector:
+    build: ./collector
+    env_file: .env
+    init: true
+    networks:
+      default:
+      wan:
+        ipv4_address: 10.20.0.10
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  saint-denis:
+    build: ./lab/agency
+    init: true
+    networks:
+      wan:
+        ipv4_address: 10.20.0.11
+
+  saint-paul:
+    build: ./lab/agency
+    init: true
+    networks:
+      wan:
+        ipv4_address: 10.20.0.12
+
+  saint-pierre:
+    build: ./lab/agency
+    init: true
+    networks:
+      wan:
+        ipv4_address: 10.20.0.13
+
+networks:
+  # The simulated WAN between headquarters (collector) and the branches.
+  wan:
+    name: bnm-wan
+    ipam:
+      config:
+        - subnet: 10.20.0.0/24
+
+volumes:
+  postgres_data:
+  redis_data:
