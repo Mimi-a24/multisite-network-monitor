@@ -506,24 +506,3 @@ make test                             # Vitest + pytest
 GitHub Actions runs three jobs on every push and pull request: `typescript` (`tsc`, ESLint and
 Vitest across `api`, `worker` and `shared`), `collector` (Ruff, pytest) and `docker`
 (`docker compose build`).
-
----
-
-## Out of scope
-
-Deliberately left out to keep the project small. Each is a known next step:
-
-- **Real branch routers**: the lab containers answer ping only. In production the collector
-  would target each branch router's LAN IP; nothing else changes.
-- **Web dashboard and user auth**: `curl` and `scripts/status.sh` cover the demo.
-- **SNMP**: ping tells whether a line answers and how fast; SNMP would read interface state and
-  error counters.
-- **WAN latency simulation**: `tc netem` on a lab container would add delay and packet loss.
-- **Application-level checks**: ping tests layer 3; an HTTP check on business apps would test
-  layer 7.
-- **`UNKNOWN` status**: flagging branches with no measurement for a while, to detect a dead
-  collector.
-- **Headquarters outage**: if every branch fails in the same cycle, the problem is probably the
-  probe or HQ, and a single incident should be raised instead of three.
-- **Deployment**: the stack runs on any Linux host with Docker Compose; the same infrastructure
-  could be described in Terraform for Azure.
